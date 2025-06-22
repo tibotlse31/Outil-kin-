@@ -3,142 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gyroscope Tone Tool</title>
-
-  <!-- Tailwind CSS via CDN -->
+  <title>Outil Gyroscopique</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+    }
+    .big-angle {
+      font-size: 6rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-tr from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col items-center justify-start min-h-screen p-6 space-y-8">
+  <h1 class="text-4xl font-bold text-center drop-shadow-lg">🎵 Outil Gyroscopique Multi-Plages</h1>
 
-  <!-- JavaScript intégré -->
+  <div class="bg-slate-800 rounded-2xl px-8 py-6 shadow-2xl ring-1 ring-slate-600">
+    <div id="angleDisplay" class="big-angle text-white text-center">0.0°</div>
+  </div>
+
+  <div id="freqDisplay" class="text-base text-gray-400 italic">Fréquence : 0 Hz</div>
+
+  <div class="w-full max-w-md bg-slate-800 p-4 rounded-xl shadow-md">
+    <div id="rangeList" class="space-y-4"></div>
+    <button id="addRangeBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl mt-4 transition-all duration-200">➕ Ajouter une plage</button>
+  </div>
+
+  <div class="flex gap-4 mt-6 flex-wrap justify-center">
+    <button id="startButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all">▶️ Démarrer outil</button>
+    <button id="stopButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all">⏹️ Stop</button>
+    <button id="recordButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition-all">🔴 Enregistrer GO/STOP</button>
+  </div>
+
   <script>
     let audioCtx, oscillator, gainNode;
     let running = false;
+    let recording = false;
+    let angleLog = [];
 
-    // Valeurs d'angle par défaut
-    let angleMin = 30;
-    let angleMax = 90;
+    const angleDisplay = document.getElementById("angleDisplay");
+    const freqDisplay = document.getElementById("freqDisplay");
+    const rangeList = document.getElementById("rangeList");
+
+    function createRangeRow(min = 0, max = 30) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "flex items-center gap-2";
+
+      wrapper.innerHTML = `
+        <label class="text-sm">Min: <input type="number" step="0.1" value="${min}" class="minAngle w-20 px-2 py-1 rounded text-black"></label>
+        <label class="text-sm">Max: <input type="number" step="0.1" value="${max}" class="maxAngle w-20 px-2 py-1 rounded text-black"></label>
+        <button class="removeBtn bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded">✖</button>
+      `;
+
+      wrapper.querySelector(".removeBtn").addEventListener("click", () => wrapper.remove());
+      rangeList.appendChild(wrapper);
+    }
+
+    document.getElementById("addRangeBtn").addEventListener("click", () => createRangeRow());
+
+    function getDefinedRanges() {
+      const rows = rangeList.querySelectorAll(".flex");
+      return Array.from(rows).map(row => {
+        const min = parseFloat(row.querySelector(".minAngle").value);
+        const max = parseFloat(row.querySelector(".maxAngle").value);
+        return { min, max };
+      });
+    }
 
     function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        oscillator = audioCtx.createOscillator();
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      oscillator = audioCtx.createOscillator();
+      gainNode = audioCtx.createGain();
+      gainNode.gain.value = 0;
 
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-        oscillator.connect(gainNode).connect(audioCtx.destination);
-        oscillator.start();
-      }
-    }
-
-    function mapAngleToNormalized(beta) {
-      if (beta < angleMin) return 0;
-      if (beta >= angleMax) return 1;
-      return (beta - angleMin) / (angleMax - angleMin);
-    }
-
-    function mapAngleToFrequency(norm) {
-      const minFreq = 200;
-      const maxFreq = 1200;
-      return minFreq + (maxFreq - minFreq) * norm;
+      oscillator.type = 'sine';
+      oscillator.connect(gainNode).connect(audioCtx.destination);
+      oscillator.start();
     }
 
     function handleOrientation(event) {
-      let beta = Math.abs(event.beta);
-      if (beta > 180) beta = 180;
+      const beta = parseFloat(event.beta.toFixed(2));
+      angleDisplay.textContent = `${beta}°`;
 
-      const normalized = mapAngleToNormalized(beta);
-      const frequency = mapAngleToFrequency(normalized);
-      const volume = normalized;
+      if (recording) {
+        const timestamp = Date.now();
+        angleLog.push({ time: timestamp, angle: beta });
+      }
 
+      const ranges = getDefinedRanges();
+      let maxVolume = 0;
+
+      for (const range of ranges) {
+        if ((range.min < range.max && beta >= range.min && beta <= range.max) ||
+            (range.max < range.min && beta <= range.min && beta >= range.max)) {
+          const norm = Math.abs((beta - range.min) / (range.max - range.min));
+          maxVolume = Math.max(maxVolume, Math.min(1, norm));
+        }
+      }
+
+      const frequency = 200 + maxVolume * 1000;
       if (oscillator && gainNode) {
         oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-        gainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.05);
+        gainNode.gain.setTargetAtTime(maxVolume, audioCtx.currentTime, 0.05);
       }
 
-      document.getElementById("angleValue").textContent = beta.toFixed(1);
-      document.getElementById("freqValue").textContent = volume === 0 ? '0 (Muet)' : frequency.toFixed(0);
-      document.getElementById("angleBar").style.width = `${normalized * 100}%`;
+      freqDisplay.textContent = `Fréquence : ${maxVolume > 0 ? frequency.toFixed(0) : 0} Hz`;
     }
 
-    function startTool() {
+    document.getElementById("startButton").addEventListener("click", async () => {
       if (running) return;
-
-      angleMin = parseFloat(document.getElementById("angleMin").value);
-      angleMax = parseFloat(document.getElementById("angleMax").value);
-      if (angleMax <= angleMin) {
-        alert("L'angle max doit être supérieur à l'angle min.");
-        return;
-      }
-
       if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === 'granted') {
-              window.addEventListener('deviceorientation', handleOrientation);
-              initAudio();
-              running = true;
-            } else {
-              alert("Permission refusée.");
-            }
-          })
-          .catch(console.error);
-      } else {
-        window.addEventListener('deviceorientation', handleOrientation);
-        initAudio();
-        running = true;
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== "granted") return alert("Permission refusée");
       }
-    }
 
-    function stopTool() {
+      initAudio();
+      window.addEventListener("deviceorientation", handleOrientation);
+      running = true;
+    });
+
+    document.getElementById("stopButton").addEventListener("click", () => {
       if (!running) return;
-      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener("deviceorientation", handleOrientation);
       if (gainNode) gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
       running = false;
+      if (recording) {
+        exportData();
+        recording = false;
+      }
+    });
+
+    document.getElementById("recordButton").addEventListener("click", () => {
+      if (!running) return alert("L'outil doit d'abord être démarré.");
+
+      if (!recording) {
+        angleLog = [];
+        recording = true;
+        alert("Enregistrement en cours...");
+      } else {
+        recording = false;
+        exportData();
+      }
+    });
+
+    function exportData() {
+      if (angleLog.length === 0) return alert("Aucune donnée enregistrée.");
+
+      let csvContent = "data:text/csv;charset=utf-8,Time (ms),Angle\n" +
+        angleLog.map(e => `${e.time},${e.angle}`).join("\n");
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "angle_data.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    window.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("startButton").addEventListener("click", startTool);
-      document.getElementById("stopButton").addEventListener("click", stopTool);
-    });
+    createRangeRow(20, 40);
   </script>
-</head>
-
-<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-6">
-
-  <div class="text-center space-y-4 max-w-md w-full">
-    <h1 class="text-3xl font-bold">🎵 Gyroscope Tone Tool</h1>
-    <p class="text-sm text-gray-300">Inclinez le téléphone : pas de son en dessous d’un certain angle.</p>
-
-    <div class="space-y-2 bg-gray-800 p-4 rounded-xl">
-      <label class="block text-sm">
-        🔻 Angle minimum (muet jusqu'à) : 
-        <input id="angleMin" type="number" value="30" min="0" max="90" class="text-black px-2 py-1 rounded w-16 ml-2">
-      </label>
-      <label class="block text-sm">
-        🔺 Angle maximum (volume max à) : 
-        <input id="angleMax" type="number" value="90" min="1" max="180" class="text-black px-2 py-1 rounded w-16 ml-2">
-      </label>
-    </div>
-
-    <div class="space-x-4">
-      <button id="startButton" class="bg-blue-600 px-6 py-2 rounded-xl hover:bg-blue-700 transition text-lg">
-        ▶️ Démarrer
-      </button>
-      <button id="stopButton" class="bg-red-600 px-6 py-2 rounded-xl hover:bg-red-700 transition text-lg">
-        ⏹️ Stop
-      </button>
-    </div>
-
-    <div class="mt-6 space-y-2">
-      <div>📐 Angle absolu : <span id="angleValue" class="font-mono text-yellow-400">0</span>°</div>
-      <div>🎧 Fréquence : <span id="freqValue" class="font-mono text-green-400">0 (Muet)</span></div>
-    </div>
-
-    <div class="w-full h-4 bg-gray-700 rounded-full overflow-hidden mt-4">
-      <div id="angleBar" class="h-full bg-green-500 transition-all" style="width: 0%"></div>
-    </div>
-  </div>
-
 </body>
 </html>
+
