@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gyroscope Tone Tool</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- JavaScript intégré -->
+  <script>
+    let audioCtx, oscillator, gainNode;
+    let running = false;
+
+    // Valeurs d'angle par défaut
+    let angleMin = 30;
+    let angleMax = 90;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        oscillator = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+        oscillator.connect(gainNode).connect(audioCtx.destination);
+        oscillator.start();
+      }
+    }
+
+    function mapAngleToNormalized(beta) {
+      if (beta < angleMin) return 0;
+      if (beta >= angleMax) return 1;
+      return (beta - angleMin) / (angleMax - angleMin);
+    }
+
+    function mapAngleToFrequency(norm) {
+      const minFreq = 200;
+      const maxFreq = 1200;
+      return minFreq + (maxFreq - minFreq) * norm;
+    }
+
+    function handleOrientation(event) {
+      let beta = Math.abs(event.beta);
+      if (beta > 180) beta = 180;
+
+      const normalized = mapAngleToNormalized(beta);
+      const frequency = mapAngleToFrequency(normalized);
+      const volume = normalized;
+
+      if (oscillator && gainNode) {
+        oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+        gainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.05);
+      }
+
+      document.getElementById("angleValue").textContent = beta.toFixed(1);
+      document.getElementById("freqValue").textContent = volume === 0 ? '0 (Muet)' : frequency.toFixed(0);
+      document.getElementById("angleBar").style.width = `${normalized * 100}%`;
+    }
+
+    function startTool() {
+      if (running) return;
+
+      angleMin = parseFloat(document.getElementById("angleMin").value);
+      angleMax = parseFloat(document.getElementById("angleMax").value);
+      if (angleMax <= angleMin) {
+        alert("L'angle max doit être supérieur à l'angle min.");
+        return;
+      }
+
+      if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              initAudio();
+              running = true;
+            } else {
+              alert("Permission refusée.");
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+        initAudio();
+        running = true;
+      }
+    }
+
+    function stopTool() {
+      if (!running) return;
+      window.removeEventListener('deviceorientation', handleOrientation);
+      if (gainNode) gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      running = false;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("startButton").addEventListener("click", startTool);
+      document.getElementById("stopButton").addEventListener("click", stopTool);
+    });
+  </script>
+</head>
+
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-6">
+
+  <div class="text-center space-y-4 max-w-md w-full">
+    <h1 class="text-3xl font-bold">🎵 Gyroscope Tone Tool</h1>
+    <p class="text-sm text-gray-300">Inclinez le téléphone : pas de son en dessous d’un certain angle.</p>
+
+    <div class="space-y-2 bg-gray-800 p-4 rounded-xl">
+      <label class="block text-sm">
+        🔻 Angle minimum (muet jusqu'à) : 
+        <input id="angleMin" type="number" value="30" min="0" max="90" class="text-black px-2 py-1 rounded w-16 ml-2">
+      </label>
+      <label class="block text-sm">
+        🔺 Angle maximum (volume max à) : 
+        <input id="angleMax" type="number" value="90" min="1" max="180" class="text-black px-2 py-1 rounded w-16 ml-2">
+      </label>
+    </div>
+
+    <div class="space-x-4">
+      <button id="startButton" class="bg-blue-600 px-6 py-2 rounded-xl hover:bg-blue-700 transition text-lg">
+        ▶️ Démarrer
+      </button>
+      <button id="stopButton" class="bg-red-600 px-6 py-2 rounded-xl hover:bg-red-700 transition text-lg">
+        ⏹️ Stop
+      </button>
+    </div>
+
+    <div class="mt-6 space-y-2">
+      <div>📐 Angle absolu : <span id="angleValue" class="font-mono text-yellow-400">0</span>°</div>
+      <div>🎧 Fréquence : <span id="freqValue" class="font-mono text-green-400">0 (Muet)</span></div>
+    </div>
+
+    <div class="w-full h-4 bg-gray-700 rounded-full overflow-hidden mt-4">
+      <div id="angleBar" class="h-full bg-green-500 transition-all" style="width: 0%"></div>
+    </div>
+  </div>
+
+</body>
+</html>
