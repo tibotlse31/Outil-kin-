@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPPB Simulator - Outil pédagogique interactif</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1200px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        .panel h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+        }
+
+        .controls {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-white);
+            color: var(--text-dark);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .value-display {
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        canvas {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .info-box h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .info-box p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 0.3rem;
+        }
+
+        .interpretation-panel {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .interpretation-panel h4 {
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .interpretation-panel p {
+            color: #78350f;
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            border-left: 4px solid var(--danger);
+            color: #7f1d1d;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            border-left: 4px solid var(--success);
+            color: #166534;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .unity-container {
+            width: 100%;
+            height: 500px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            background: #1a1a2e;
+            position: relative;
+        }
+
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas#labyrinthe {
+            max-width: 100%;
+            max-height: 100%;
+            background: white;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .eye-movement {
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            margin: 1rem auto;
+            position: relative;
+            background: white;
+        }
+
+        .eye-pupil {
+            width: 20px;
+            height: 20px;
+            background: var(--text-dark);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .animation-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .animation-controls button {
+            flex: 1;
+        }
+
+        .speed-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            margin-left: 0.5rem;
+        }
+
+        .position-indicator {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        .pos-box {
+            padding: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .pos-box.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧬 VPPB Simulator</h1>
+        <p>Outil pédagogique interactif - Visualisation biomécanique 3D des otholites et nystagmus</p>
+    </div>
+
+    <div class="container">
+        <!-- Sélection du canal -->
+        <div class="panel">
+            <h2>1️⃣ Sélectionner le canal atteint</h2>
+            <div class="btn-group">
+                <button class="btn active" onclick="setCanal('post')">Canal postérieur (90%)</button>
+                <button class="btn" onclick="setCanal('horiz')">Canal horizontal (9%)</button>
+                <button class="btn" onclick="setCanal('ant')">Canal antérieur (1%)</button>
+            </div>
+            <div class="info-box" id="canalInfo"></div>
+        </div>
+
+        <!-- Layout principal: Visualisation 3D et Contrôles -->
+        <div class="layout">
+            <!-- Visualisation 3D du labyrinthe -->
+            <div class="panel">
+                <h2>🎯 Visualisation 3D du labyrinthe</h2>
+                <div class="unity-container">
+                    <canvas id="labyrinthe"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b6b;"></div>
+                        <span>Cristaux (otholites)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4ecdc4;"></div>
+                        <span>Endolymphe</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #95e1d3;"></div>
+                        <span>Cupule</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #c7a0e8;"></div>
+                        <span>Ampoule</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contrôles des manoeuvres -->
+            <div class="panel">
+                <h2>🎮 Contrôles des manoeuvres</h2>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('manoeuvre')">Manoeuvre</button>
+                    <button class="tab" onclick="switchTab('test')">Test diagnostic</button>
+                    <button class="tab" onclick="switchTab('analysis')">Analyse</button>
+                </div>
+
+                <!-- TAB: Manoeuvre -->
+                <div id="manoeuvre" class="tab-content active">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Sélectionner la manoeuvre:</label>
+                            <div class="btn-group" id="manoeuvreButtons"></div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Progress de la manoeuvre:</label>
+                            <div class="slider-container">
+                                <input type="range" id="manoeuvreSlider" min="0" max="100" value="0" 
+                                       oninput="updateManoeuvreProgress(this.value)">
+                                <span class="value-display" id="progressDisplay">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="animation-controls">
+                            <button class="btn-primary" onclick="playAnimation()">▶️ Jouer</button>
+                            <button class="btn-primary" onclick="pauseAnimation()">⏸️ Pause</button>
+                            <button class="btn-primary" onclick="resetAnimation()">🔄 Réinitialiser</button>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Vitesse d'animation:</label>
+                            <div class="slider-container">
+                                <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1" 
+                                       oninput="updateSpeed(this.value)">
+                                <span class="value-display" id="speedDisplay">1x</span>
+                            </div>
+                        </div>
+
+                        <div class="interpretation-panel" id="manoeuvreInfo"></div>
+                    </div>
+                </div>
+
+                <!-- TAB: Test diagnostic -->
+                <div id="test" class="tab-content">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Sélectionner le test:</label>
+                            <div class="btn-group" id="testButtons"></div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Progress du test:</label>
+                            <div class="slider-container">
+                                <input type="range" id="testSlider" min="0" max="100" value="0"
+                                       oninput="updateTestProgress(this.value)">
+                                <span class="value-display" id="testProgressDisplay">0%</span>
+                            </div>
+                        </div>
+
+                        <div class="animation-controls">
+                            <button class="btn-primary" onclick="playTest()">▶️ Jouer</button>
+                            <button class="btn-primary" onclick="pauseTest()">⏸️ Pause</button>
+                            <button class="btn-primary" onclick="resetTest()">🔄 Réinitialiser</button>
+                        </div>
+
+                        <div class="interpretation-panel" id="testInfo"></div>
+                    </div>
+                </div>
+
+                <!-- TAB: Analyse -->
+                <div id="analysis" class="tab-content">
+                    <div class="controls">
+                        <h3>📊 Analyse du nystagmus</h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Latence</div>
+                                <div class="stat-value" id="latenceValue">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Direction</div>
+                                <div class="stat-value" id="directionValue" style="font-size: 1rem;">-</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Amplitude</div>
+                                <div class="stat-value" id="amplitudeValue">-</div>
+                            </div>
+                        </div>
+
+                        <h3 style="margin-top: 1.5rem;">👁️ Mouvement oculaire</h3>
+                        <div class="eye-movement">
+                            <div class="eye-pupil" id="eyePupil"></div>
+                        </div>
+
+                        <h3 style="margin-top: 1.5rem;">📍 Position de la tête</h3>
+                        <div class="position-indicator">
+                            <div class="pos-box" id="pos-left">Gauche</div>
+                            <div class="pos-box active" id="pos-center">Centre</div>
+                            <div class="pos-box" id="pos-right">Droite</div>
+                        </div>
+
+                        <div class="interpretation-panel" id="analysisInterpretation"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section infos détaillées -->
+        <div class="panel">
+            <h2>📚 Interprétation clinique</h2>
+            <div id="clinicalInfo"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>VPPB Simulator v1.0 | Outil pédagogique pour la formation en vestibulologie</p>
+        <p><a href="https://github.com" target="_blank">📱 GitHub Repository</a> | 
+           <a href="#" onclick="openDocumentation()">📖 Documentation</a></p>
+    </div>
+
+    <script src="js/simulator.js"></script>
+    <script src="js/visualization.js"></script>
+    <script src="js/analysis.js"></script>
+</body>
+</html>

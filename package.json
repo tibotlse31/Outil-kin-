@@ -1,0 +1,50 @@
+{
+  "name": "vppb-simulator",
+  "version": "1.0.0",
+  "description": "Outil pédagogique interactif pour la formation en vestibulologie - Simulateur 3D VPPB avec visualisation biomécanique des otholites et nystagmus",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "start:npm": "http-server",
+    "lint": "eslint js/",
+    "format": "prettier --write .",
+    "build": "echo 'No build needed - static HTML/CSS/JS'",
+    "test": "echo 'Manual testing recommended'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/vppb-simulator.git"
+  },
+  "keywords": [
+    "VPPB",
+    "vestibule",
+    "vertigo",
+    "simulation",
+    "medical education",
+    "interactive learning",
+    "3D visualization",
+    "nystagmus",
+    "otoliths",
+    "biomechanics"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "http-server": "^14.1.1",
+    "terser": "^5.19.0"
+  },
+  "optionalDependencies": {
+    "three": "^r128",
+    "babylonjs": "^6.0.0"
+  },
+  "homepage": "https://YOUR_USERNAME.github.io/vppb-simulator",
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/vppb-simulator/issues",
+    "email": "your.email@example.com"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
